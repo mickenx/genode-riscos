@@ -1,3 +1,11 @@
+The included RISC SO ROM ( as c header) is licended with the Apache 2.0 license.
+See the official Gitlab respository for more information:
+https://gitlab.riscosopen.org/explore/groups
+
+
+For Genode and my application code:
+
+
 Linking exception clause
 
 
