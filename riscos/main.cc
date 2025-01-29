@@ -19,7 +19,6 @@
 #include <base/attached_io_mem_dataspace.h>
 #include <terminal_session/connection.h>
 #include <libc/component.h>
-extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -30,7 +29,6 @@ extern "C" {
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
-		}	
 #include "riscos.h"
 #include "muinc.h"
 #define STDIN 0
