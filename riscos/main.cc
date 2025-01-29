@@ -19,6 +19,7 @@
 #include <base/attached_io_mem_dataspace.h>
 #include <terminal_session/connection.h>
 #include <libc/component.h>
+extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -29,6 +30,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
+		}	
 #include "riscos.h"
 #include "muinc.h"
 #define STDIN 0
@@ -45,7 +47,7 @@ static  Genode::addr_t _mubuf;
 static  Genode::addr_t mbufb;
 static  Genode::addr_t _statusbuf;
 
-Gui::Session::View_handle *g_handle;
+Gui::View_id *g_handle;
 
 static Gui::Connection *_gui;//   { env, "unicorn" };
 typedef Genode::Pixel_rgb888 PT;
@@ -95,7 +97,8 @@ struct Inp_thread : Genode::Thread
 	tv.tv_nsec=907000;
 	tv.tv_sec=0;
 
-	_gui->input()->for_each_event([&] (Input::Event const &ev) {
+	//_gui->input()->for_each_event([&] (Input::Event const &ev) {
+	_gui->input.for_each_event([&] (Input::Event const &ev) {
      
 coords=0;
 	ev.handle_press([&] (Input::Keycode key, Genode::Codepoint) {
@@ -302,7 +305,7 @@ while(1) {
 	tv.tv_nsec=10;
 	my_copy((unsigned char*)_dst,(unsigned char*)_src,640*480*4);
 	
-         _gui->framebuffer()->refresh(0,0,639,479);
+         _gui->framebuffer.refresh(0,0,639,479);
     
         Libc::with_libc([&] () { clock_gettime(CLOCK_MONOTONIC, &last); });
 	llTime=last.tv_nsec + (last.tv_sec * 1000000000LL);
@@ -346,13 +349,13 @@ __attribute__ ((noinline)) void  Libc::Component::construct(Libc::Env &env)
         static Gui::Connection   gui   { env, "risc_os" };//unicorn" };
         int const scr_w=640;
 	int const scr_h=480;
-	Framebuffer::Mode const mode { .area = { scr_w,scr_h } };
-        gui.buffer(mode, false);
+	Framebuffer::Mode const mode { .area = { scr_w,scr_h },.alpha=false };
+        gui.buffer(mode);
         
 Genode::Attached_io_mem_dataspace _hwds(env, 0xA0000100, 640*480*4,true);
    PT * hwbuffer=_hwds.local_addr<PT>();
         Genode::Attached_dataspace fb_ds(
-                env.rm(), gui.framebuffer()->dataspace());
+                env.rm(), gui.framebuffer.dataspace());
         PT * swbuffer = fb_ds.local_addr<PT>();
 	_dst=swbuffer;
 	_src=hwbuffer;
@@ -368,15 +371,18 @@ Genode::Attached_io_mem_dataspace _hwds(env, 0xA0000100, 640*480*4,true);
 
                         using namespace Gui;
 
-                        Gui::Session::View_handle _handle;
+                        Gui::View_id _handle;
+			gui.view( _handle,
+							{ }  
+						);
 			g_handle = &_handle;
                         
-                        _handle = gui.create_view();
+                        //_handle = gui.create_view();
 
 
                         Gui::Rect rect(Gui::Point(100,100), Gui::Area(scr_w,scr_h));
                         gui.enqueue<Command::Geometry>(_handle, rect);
-                        gui.enqueue<Command::To_front>(_handle, Gui::Session::View_handle());
+                        gui.enqueue<Command::Front>(_handle); //, Gui::Session::View_handle());
                         gui.enqueue<Command::Title>(_handle, "riscosfb");
                         gui.execute();
                         
@@ -419,7 +425,7 @@ Genode::Attached_io_mem_dataspace _hwds(env, 0xA0000100, 640*480*4,true);
 			"mov x0,#555 \n\t"
 			"svc #0 \n\t"
 						);
-	volatile int strcount=0;
+	int strcount=0;
 	while (1)
 	{
        
@@ -511,7 +517,7 @@ FILE * outfile =0;
 struct stat loadlen;
 int loadfd = open(dirarg,O_RDONLY);
 fstat(loadfd,&loadlen);
-uint32_t loadsize = loadlen.st_size;
+uint32_t loadsize = (uint32_t)loadlen.st_size;
 close(loadfd);
 Genode::log("loadsize: ",Genode::Hex(loadsize));
 
@@ -540,7 +546,7 @@ if (loadsize>0)//outfile)
 	}
 	while(!((int)(*((int*)(statusbuf))) & (1<<22))) {}
 	
-	*((int*)sendbuf2)=fromro;
+	*((int*)sendbuf2)=(int)fromro;
 	
        }
 #endif
